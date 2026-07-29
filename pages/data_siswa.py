@@ -34,7 +34,7 @@ st.write(
 )
 
 # --- 1. FORM TAMBAH DATA ---
-with st.expander("➕ Tambah Data Siswa Baru", expanded=False):
+with st.expander("➕ Tambah Data Siswa Baru", expanded=True):
   with st.form("tambah_siswa_form"):
     nama = st.text_input("Nama Lengkap")
     nisn = st.text_input("NISN")
@@ -74,17 +74,23 @@ if rows:
       rows, columns=["ID", "Nama", "NISN", "Jenjang", "Kelas", "L/P"]
   )
   st.dataframe(df, use_container_width=True)
+else:
+  st.warning(
+      "Belum ada data siswa di dalam database. Silakan isi form di atas terlebih"
+      " dahulu."
+  )
 
-  st.markdown("### ⚙️ Menu Aksi Data (Edit & Hapus)")
+st.markdown("---")
+st.markdown("### ⚙️ Menu Aksi Data (Edit & Hapus)")
 
-  # Pilihan ID Siswa menggunakan selectbox agar tombol terjamin muncul
+# --- 3. MENU AKSI & TOMBOL (DIJAMIN SELALU MUNCUL) ---
+if rows:
   id_list = df["ID"].tolist()
   selected_id = st.selectbox(
       "Pilih ID Siswa untuk diedit atau dihapus:", options=id_list
   )
 
   if selected_id:
-    # Ambil data spesifik berdasarkan ID yang dipilih
     conn = sqlite3.connect("dian_wacana.db")
     cursor = conn.cursor()
     cursor.execute(
@@ -99,13 +105,11 @@ if rows:
 
       col1, col2 = st.columns(2)
 
-      # Tombol untuk memicu mode Edit
       with col1:
         if st.button("✏️ Edit Siswa Terpilih", use_container_width=True):
           st.session_state["edit_id"] = selected_id
           st.rerun()
 
-      # Tombol untuk langsung Hapus
       with col2:
         if st.button("🗑️ Hapus Siswa Terpilih", use_container_width=True):
           conn = sqlite3.connect("dian_wacana.db")
@@ -117,72 +121,65 @@ if rows:
             del st.session_state["edit_id"]
           st.success(f"Data siswa dengan ID {selected_id} berhasil dihapus!")
           st.rerun()
-
-  # --- FORM EDIT (MUNCUL JIKA TOMBOL EDIT DIKLIK) ---
-  if st.session_state.get("edit_id"):
-    current_edit_id = st.session_state["edit_id"]
-
-    conn = sqlite3.connect("dian_wacana.db")
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT nama, nisn, jenjang, kelas, jk FROM siswa WHERE id = ?",
-        (current_edit_id,),
-    )
-    edit_row = cursor.fetchone()
-    conn.close()
-
-    if edit_row:
-      e_nama, e_nisn, e_jenjang, e_kelas, e_jk = edit_row
-
-      st.markdown("---")
-      st.markdown(f"#### Edit Data Siswa (ID: {current_edit_id})")
-
-      with st.form("form_edit_data"):
-        new_nama = st.text_input("Nama Lengkap", value=e_nama)
-        new_nisn = st.text_input("NISN", value=e_nisn)
-        new_jenjang = st.selectbox(
-            "Jenjang",
-            ["KB", "TK", "SD"],
-            index=["KB", "TK", "SD"].index(e_jenjang),
-        )
-        new_kelas = st.text_input("Kelas", value=e_kelas)
-        new_jk = st.selectbox(
-            "Jenis Kelamin",
-            ["Laki-laki", "Perempuan"],
-            index=["Laki-laki", "Perempuan"].index(e_jk),
-        )
-
-        col_a, col_b = st.columns(2)
-        update_btn = col_a.form_submit_button(
-            "Simpan Perubahan", use_container_width=True
-        )
-        cancel_btn = col_b.form_submit_button(
-            "Batal", use_container_width=True
-        )
-
-        if update_btn:
-          conn = sqlite3.connect("dian_wacana.db")
-          cursor = conn.cursor()
-          cursor.execute(
-              "UPDATE siswa SET nama=?, nisn=?, jenjang=?, kelas=?, jk=? WHERE"
-              " id=?",
-              (
-                  new_nama,
-                  new_nisn,
-                  new_jenjang,
-                  new_kelas,
-                  new_jk,
-                  current_edit_id,
-              ),
-          )
-          conn.commit()
-          conn.close()
-          del st.session_state["edit_id"]
-          st.success("Data berhasil diperbarui!")
-          st.rerun()
-
-        if cancel_btn:
-          del st.session_state["edit_id"]
-          st.rerun()
 else:
-  st.info("Belum ada data siswa di dalam database.")
+  st.info(
+      "Tombol aksi (Edit & Hapus) akan aktif otomatis setelah ada data siswa"
+      " yang tersimpan."
+  )
+
+# --- 4. FORM EDIT (MUNCUL JIKA TOMBOL EDIT DIKLIK) ---
+if st.session_state.get("edit_id"):
+  current_edit_id = st.session_state["edit_id"]
+
+  conn = sqlite3.connect("dian_wacana.db")
+  cursor = conn.cursor()
+  cursor.execute(
+      "SELECT nama, nisn, jenjang, kelas, jk FROM siswa WHERE id = ?",
+      (current_edit_id,),
+  )
+  edit_row = cursor.fetchone()
+  conn.close()
+
+  if edit_row:
+    e_nama, e_nisn, e_jenjang, e_kelas, e_jk = edit_row
+
+    st.markdown("---")
+    st.markdown(f"#### 📝 Edit Data Siswa (ID: {current_edit_id})")
+
+    with st.form("form_edit_data"):
+      new_nama = st.text_input("Nama Lengkap", value=e_nama)
+      new_nisn = st.text_input("NISN", value=e_nisn)
+      new_jenjang = st.selectbox(
+          "Jenjang",
+          ["KB", "TK", "SD"],
+          index=["KB", "TK", "SD"].index(e_jenjang),
+      )
+      new_kelas = st.text_input("Kelas", value=e_kelas)
+      new_jk = st.selectbox(
+          "Jenis Kelamin",
+          ["Laki-laki", "Perempuan"],
+          index=["Laki-laki", "Perempuan"].index(e_jk),
+      )
+
+      col_a, col_b = st.columns(2)
+      update_btn = col_a.form_submit_button(
+          "Simpan Perubahan", use_container_width=True
+      )
+      cancel_btn = col_b.form_submit_button("Batal", use_container_width=True)
+
+      if update_btn:
+        conn = sqlite3.connect("dian_wacana.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE siswa SET nama=?, nisn=?, jenjang=?, kelas=?, jk=? WHERE id=?",
+            (new_nama, new_nisn, new_jenjang, new_kelas, new_jk, current_edit_id),
+        )
+        conn.commit()
+        conn.close()
+        del st.session_state["edit_id"]
+        st.success("Data berhasil diperbarui!")
+        st.rerun()
+
+      if cancel_btn:
+        del st.session_state["edit_id"]
+        st.rerun()

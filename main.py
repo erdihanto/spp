@@ -1,70 +1,30 @@
-import sqlite3
 import streamlit as st
 
-# --- Inisialisasi Database ---
-def init_db():
-  conn = sqlite3.connect("dian_wacana.db")
-  cursor = conn.cursor()
-  cursor.execute("""
-        CREATE TABLE IF NOT EXISTS siswa (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nama TEXT,
-            nisn TEXT,
-            jenjang TEXT,
-            kelas TEXT,
-            jk TEXT
-        )
-    """)
-  conn.commit()
-  conn.close()
+st.set_page_config(
+    page_title="Sistem Informasi Dian Wacana", page_icon="🏫", layout="wide"
+)
 
+st.title("🏫 Selamat Datang di Portal TK-KB-SD Dian Wacana")
+st.write(
+    "Silakan pilih menu di samping (sidebar) untuk mengakses fitur aplikasi."
+)
 
-init_db()
+st.markdown("---")
 
-st.title("📚 Data Siswa TK-KB-SD Dian Wacana")
+# Tampilan Halaman Utama / Dashboard Sederhana
+col1, col2 = st.columns(2)
 
-# --- Form Tambah Data di Sidebar ---
-st.sidebar.header("Tambah Siswa Baru")
-with st.sidebar.form("form_tambah"):
-  nama = st.text_input("Nama Lengkap")
-  nisn = st.text_input("NISN / No. Induk")
-  jenjang = st.selectbox("Jenjang", ["KB", "TK", "SD"])
-  kelas = st.text_input("Kelas")
-  jk = st.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
-  submit = st.form_submit_button("Simpan Data")
-
-  if submit:
-    if nama and nisn and kelas:
-      conn = sqlite3.connect("dian_wacana.db")
-      cursor = conn.cursor()
-      cursor.execute(
-          "INSERT INTO siswa (nama, nisn, jenjang, kelas, jk) VALUES (?, ?, ?,"
-          " ?, ?)",
-          (nama, nisn, jenjang, kelas, jk),
-      )
-      conn.commit()
-      conn.close()
-      st.sidebar.success("Data siswa berhasil ditambahkan!")
-      st.rerun()
-    else:
-      st.sidebar.error("Semua kolom harus diisi!")
-
-# --- Menampilkan Data dalam Tabel ---
-st.subheader("Daftar Siswa Terdaftar")
-conn = sqlite3.connect("dian_wacana.db")
-cursor = conn.cursor()
-cursor.execute("SELECT id, nama, nisn, jenjang, kelas, jk FROM siswa")
-data_siswa = cursor.fetchall()
-conn.close()
-
-if data_siswa:
-  # Konversi ke format yang bisa dibaca Streamlit
-  import pandas as pd
-
-  df = pd.DataFrame(
-      data_siswa,
-      columns=["ID", "Nama Lengkap", "NISN", "Jenjang", "Kelas", "L/P"],
+with col1:
+  st.info("### 📌 Informasi Sekolah")
+  st.write(
+      "Aplikasi ini digunakan untuk mengelola data administrasi dan kesiswaan"
+      " unit Kelompok Bermain (KB), Taman Kanak-Kanak (TK), dan Sekolah Dasar"
+      " (SD) Dian Wacana."
   )
-  st.dataframe(df, use_container_width=True)
-else:
-  st.info("Belum ada data siswa.")
+
+with col2:
+  st.success("### 🚀 Navigasi Cepat")
+  st.write(
+      "Gunakan menu **Data Siswa** pada panel sebelah kiri untuk melihat,"
+      " menambah, atau mengelola data siswa."
+  )

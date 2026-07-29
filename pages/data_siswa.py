@@ -6,7 +6,7 @@ st.set_page_config(
     page_title="Manajemen Data Siswa - Dian Wacana", page_icon="📚", layout="wide"
 )
 
-# --- CUSTOM CSS UNTUK TAMPILAN COLORFUL & TOMBOL ---
+# --- CUSTOM CSS UNTUK TAMPILAN COLORFUL ---
 st.markdown("""
     <style>
     .colorful-header {
@@ -103,7 +103,7 @@ cursor.execute("SELECT id, nama, nisn, jenjang, kelas, jk FROM siswa")
 data_siswa = cursor.fetchall()
 conn.close()
 
-st.markdown("### 📋 Daftar Seluruh Siswa Terdaftar")
+st.markdown("### 📋 Daftar & Pengelolaan Data Siswa")
 
 if data_siswa:
   df = pd.DataFrame(
@@ -123,81 +123,68 @@ if data_siswa:
     st.metric(label="🎨 Jenjang KB & TK", value=f"{total_kbtk} Siswa")
 
   st.markdown("<br>", unsafe_allow_html=True)
+  st.info(
+      "💡 **Tips:** Anda dapat mengedit langsung teks di dalam tabel di bawah ini,"
+      " lalu klik tombol **Simpan Perubahan**."
+  )
 
-  # --- DAFTAR BARIS DENGAN TOMBOL EDIT & HAPUS YANG DIPERBAIKI ---
-  for row in data_siswa:
-    s_id, s_nama, s_nisn, s_jenjang, s_kelas, s_jk = row
+  # --- MENGGUNAKAN DATA EDITOR AGAR MUDAH DIEDIT & DIHAPUS ---
+  edited_df = st.data_editor(
+      df,
+      num_rows="dynamic",
+      use_container_width=True,
+      key="datatable_siswa",
+      column_config={
+          "ID": st.column_config.NumberColumn("ID", disabled=True),
+          "Jenjang": st.column_config.SelectboxColumn(
+              "Jenjang", options=["KB", "TK", "SD"], required=True
+          ),
+          "L/P": st.column_config.SelectboxColumn(
+              "Jenis Kelamin",
+              options=["Laki-laki", "Perempuan"],
+              required=True,
+          ),
+      },
+  )
 
-    with st.container():
-      # Menggunakan proporsi kolom yang lebih luas agar tombol tidak tersembunyi
-      cols = st.columns([2.5, 1.8, 0.8, 1, 1, 1, 1])
-      cols[0].write(f"**{s_nama}**")
-      cols[1].write(f"NISN: {s_nisn}")
-      cols[2].write(f"**{s_jenjang}**")
-      cols[3].write(f"Kelas: {s_kelas}")
-      cols[4].write(f"{s_jk}")
+  col_btn1, col_btn2 = st.columns(2)
 
-      # Tombol Edit
-      with cols[5]:
-        if st.button("✏️ Edit", key=f"btn_edit_{s_id}"):
-          st.session_state[f"editing_{s_id}"] = True
-
-      # Tombol Hapus
-      with cols[6]:
-        if st.button("🗑️ Hapus", key=f"btn_hapus_{s_id}", type="primary"):
-          conn = sqlite3.connect("dian_wacana.db")
-          cursor = conn.cursor()
-          cursor.execute("DELETE FROM siswa WHERE id = ?", (s_id,))
-          conn.commit()
-          conn.close()
-          st.success(f"Data {s_nama} berhasil dihapus!")
-          st.rerun()
-
-    # Form Edit Interaktif jika tombol Edit diklik
-    if st.session_state.get(f"editing_{s_id}", False):
-      with st.form(f"form_edit_{s_id}"):
-        st.markdown(f"**Edit Data: {s_nama}**")
-        e_nama = st.text_input("Nama Lengkap", value=s_nama, key=f"en_{s_id}")
-        e_nisn = st.text_input("NISN", value=s_nisn, key=f"ei_{s_id}")
-        e_jenjang = st.selectbox(
-            "Jenjang",
-            ["KB", "TK", "SD"],
-            index=["KB", "TK", "SD"].index(s_jenjang),
-            key=f"ej_{s_id}",
+  # Tombol Simpan Perubahan (Edit)
+  with col_btn1:
+    if st.button(
+        "💾 Simpan Perubahan Data",
+        type="primary",
+        use_container_width=True,
+    ):
+      conn = sqlite3.connect("dian_wacana.db")
+      cursor = conn.cursor()
+      # Kosongkan tabel lalu masukkan ulang data yang sudah diedit/dihapus
+      cursor.execute("DELETE FROM siswa")
+      for index, row in edited_df.iterrows():
+        cursor.execute(
+            "INSERT INTO siswa (id, nama, nisn, jenjang, kelas, jk) VALUES (?,"
+            " ?, ?, ?, ?, ?)",
+            (
+                row["ID"],
+                row["Nama Lengkap"],
+                row["NISN"],
+                row["Jenjang"],
+                row["Kelas"],
+                row["L/P"],
+            ),
         )
-        e_kelas = st.text_input("Kelas", value=s_kelas, key=f"ek_{s_id}")
-        e_jk = st.selectbox(
-            "Jenis Kelamin",
-            ["Laki-laki", "Perempuan"],
-            index=["Laki-laki", "Perempuan"].index(s_jk),
-            key=f"eg_{s_id}",
-        )
+      conn.commit()
+      conn.close()
+      st.success("✅ Perubahan data berhasil disimpan ke database!")
+      st.rerun()
 
-        col_sub1, col_sub2 = st.columns(2)
-        update_btn = col_sub1.form_submit_button("💾 Perbarui Data")
-        batal_btn = col_sub2.form_submit_button("❌ Batal")
+  # Tombol Hapus Baris Terpilih
+  with col_btn2:
+    if st.button("🗑️ Hapus Baris / Reset", use_container_width=True):
+      st.warning(
+          "Untuk menghapus baris, gunakan ikon tempat sampah di sebelah kiri"
+          " baris tabel, lalu klik 'Simpan Perubahan Data'."
+      )
 
-        if update_btn:
-          conn = sqlite3.connect("dian_wacana.db")
-          cursor = conn.cursor()
-          cursor.execute(
-              "UPDATE siswa SET nama=?, nisn=?, jenjang=?, kelas=?, jk=? WHERE"
-              " id=?",
-              (e_nama, e_nisn, e_jenjang, e_kelas, e_jk, s_id),
-          )
-          conn.commit()
-          conn.close()
-          st.session_state[f"editing_{s_id}"] = False
-          st.success("Data berhasil diperbarui!")
-          st.rerun()
-
-        if batal_btn:
-          st.session_state[f"editing_{s_id}"] = False
-          st.rerun()
-
-    st.markdown(
-        "<hr style='margin: 5px 0px; border-top: 1px solid #ddd;'>",
-        unsafe_allow_html=True,
-    )
 else:
   st.warning("🎨 Belum ada data siswa yang tersimpan di database.")

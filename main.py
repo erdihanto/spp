@@ -1,64 +1,89 @@
+import sqlite3
+import pandas as pd
 import streamlit as st
 
 # Konfigurasi halaman
 st.set_page_config(
-    page_title="Sistem Informasi Dian Wacana", page_icon="🏫", layout="wide"
+    page_title="Data Siswa Dian Wacana", page_icon="📚", layout="wide"
 )
 
-# --- SIDEBAR: Menu Navigasi (Tanpa Database) ---
-st.sidebar.title("🏫 Menu Utama")
-st.sidebar.write("Silakan pilih menu di bawah:")
 
-# Pilihan menu menggunakan Radio Button di Sidebar
-menu_pilihan = st.sidebar.radio(
-    "Navigasi:", ["Beranda (Home)", "Kelola Data Siswa"]
-)
+# --- Inisialisasi Database ---
+def init_db():
+  conn = sqlite3.connect("dian_wacana.db")
+  cursor = conn.cursor()
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS siswa (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nama TEXT,
+            nisn TEXT,
+            jenjang TEXT,
+            kelas TEXT,
+            jk TEXT
+        )
+    """)
+  conn.commit()
+  conn.close()
 
-st.sidebar.markdown("---")
-st.sidebar.info("Aplikasi TK - KB - SD Dian Wacana")
 
-# --- KONTROL TAMPILAN BERDASARKAN MENU ---
+init_db()
 
-if menu_pilihan == "Beranda (Home)":
-  # Halaman Utama (Murni Informasi)
-  st.title("🏫 Selamat Datang di Portal TK-KB-SD Dian Wacana")
-  st.write(
-      "Aplikasi ini digunakan untuk mengelola data administrasi dan kesiswaan"
-      " unit Kelompok Bermain (KB), Taman Kanak-Kanak (TK), dan Sekolah Dasar"
-      " (SD) Dian Wacana."
-  )
+st.title("📚 Manajemen Data Siswa TK-KB-SD Dian Wacana")
+st.write("Gunakan formulir di bawah ini untuk menambahkan data siswa baru.")
 
-  st.markdown("---")
+# --- FORM TAMBAH DATA DI TENGAH ---
+with st.form("form_tambah_siswa_tengah"):
+  st.subheader("Formulir Tambah Siswa Baru")
 
-  col1, col2 = st.columns(2)
+  col_a, col_b = st.columns(2)
+  with col_a:
+    nama = st.text_input("Nama Lengkap")
+    nisn = st.text_input("NISN / No. Induk")
+    jenjang = st.selectbox("Jenjang", ["KB", "TK", "SD"])
+  with col_b:
+    kelas = st.text_input("Kelas")
+    jk = st.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
 
-  with col1:
-    st.info("### 📌 Informasi Sekolah")
-    st.write(
-        "Gunakan menu navigasi **Kelola Data Siswa** di panel sebelah kiri untuk"
-        " mulai memasukkan atau melihat data."
+  submit = st.form_submit_button("Simpan Data Siswa")
+
+  if submit:
+    if nama and nisn and kelas:
+      conn = sqlite3.connect("dian_wacana.db")
+      cursor = conn.cursor()
+      cursor.execute(
+          "INSERT INTO siswa (nama, nisn, jenjang, kelas, jk) VALUES (?, ?, ?, ?, ?)",
+          (nama, nisn, jenjang, kelas, jk),
+      )
+      conn.commit()
+      conn.close()
+      st.success("Data siswa berhasil ditambahkan!")
+    else:
+      st.error("Semua kolom harus diisi!")
+
+st.markdown("---")
+
+# --- TOMBOL VIEW DATA & TABEL DI BAWAHNYA ---
+st.subheader("Data Siswa Terdaftar")
+
+if st.button("👁️ View Data Siswa"):
+  st.session_state["tampilkan_data"] = True
+
+if st.session_state.get("tampilkan_data", False):
+  conn = sqlite3.connect("dian_wacana.db")
+  cursor = conn.cursor()
+  cursor.execute("SELECT id, nama, nisn, jenjang, kelas, jk FROM siswa")
+  data_siswa = cursor.fetchall()
+  conn.close()
+
+  if data_siswa:
+    df = pd.DataFrame(
+        data_siswa,
+        columns=["ID", "Nama Lengkap", "NISN", "Jenjang", "Kelas", "L/P"],
     )
-
-  with col2:
-    st.success("### 🚀 Petunjuk Penggunaan")
-    st.write(
-        "Klik pilihan **Kelola Data Siswa** pada sidebar untuk membuka form"
-        " tambah data dan tabel siswa."
-    )
-
-elif menu_pilihan == "Kelola Data Siswa":
-  # Bagian ini mengarahkan pengguna ke file terpisah (data_siswa.py) 
-  # atau memuat komponen datanya secara aman.
-  # Pastikan file 'data_siswa.py' ada di dalam folder 'pages/'
-  
-  st.title("📂 Pindah Halaman")
-  st.write("Anda memilih menu **Kelola Data Siswa**.")
+    st.dataframe(df, use_container_width=True)
+  else:
+    st.info("Belum ada data siswa di dalam database.")
+else:
   st.write(
-      "Silعة klik tautan atau menu halaman **Data Siswa** yang otomatis muncul di"
-      " bagian atas/bawah sidebar bawaan Streamlit, atau gunakan tombol di"
-      " bawah ini:"
+      "Klik tombol **View Data Siswa** di atas untuk menampilkan daftar siswa."
   )
-
-  # Tombol alternatif untuk pindah halaman jika menggunakan struktur pages/
-  if st.button("👉 Buka Halaman Data Siswa"):
-    st.switch_page("pages/data_siswa.py")

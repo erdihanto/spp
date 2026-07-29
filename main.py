@@ -4,11 +4,10 @@ import streamlit as st
 
 # Konfigurasi halaman
 st.set_page_config(
-    page_title="Data Siswa Dian Wacana", page_icon="📚", layout="wide"
+    page_title="Sistem Informasi Dian Wacana", page_icon="🏫", layout="wide"
 )
 
-
-# --- Inisialisasi Database ---
+# --- FUNGSI DATABASE (Hanya dipanggil ketika menu Data Siswa dipilih) ---
 def init_db():
   conn = sqlite3.connect("dian_wacana.db")
   cursor = conn.cursor()
@@ -26,64 +25,95 @@ def init_db():
   conn.close()
 
 
-init_db()
+# --- SIDEBAR: MENU UTAMA ---
+st.sidebar.title("🏫 Menu Utama")
+pilihan_menu = st.sidebar.radio(
+    "Pilih Menu:", ["Beranda", "Data Siswa", "Informasi Sekolah"]
+)
 
-st.title("📚 Manajemen Data Siswa TK-KB-SD Dian Wacana")
-st.write("Gunakan formulir di bawah ini untuk menambahkan data siswa baru.")
+st.sidebar.markdown("---")
+st.sidebar.info("TK - KB - SD Dian Wacana")
 
-# --- FORM TAMBAH DATA DI TENGAH ---
-with st.form("form_tambah_siswa_tengah"):
-  st.subheader("Formulir Tambah Siswa Baru")
+# --- KONTROL TAMPILAN BERDASARKAN MENU YANG DIPILIH ---
 
-  col_a, col_b = st.columns(2)
-  with col_a:
-    nama = st.text_input("Nama Lengkap")
-    nisn = st.text_input("NISN / No. Induk")
-    jenjang = st.selectbox("Jenjang", ["KB", "TK", "SD"])
-  with col_b:
-    kelas = st.text_input("Kelas")
-    jk = st.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
-
-  submit = st.form_submit_button("Simpan Data Siswa")
-
-  if submit:
-    if nama and nisn and kelas:
-      conn = sqlite3.connect("dian_wacana.db")
-      cursor = conn.cursor()
-      cursor.execute(
-          "INSERT INTO siswa (nama, nisn, jenjang, kelas, jk) VALUES (?, ?, ?, ?, ?)",
-          (nama, nisn, jenjang, kelas, jk),
-      )
-      conn.commit()
-      conn.close()
-      st.success("Data siswa berhasil ditambahkan!")
-    else:
-      st.error("Semua kolom harus diisi!")
-
-st.markdown("---")
-
-# --- TOMBOL VIEW DATA & TABEL DI BAWAHNYA ---
-st.subheader("Data Siswa Terdaftar")
-
-if st.button("👁️ View Data Siswa"):
-  st.session_state["tampilkan_data"] = True
-
-if st.session_state.get("tampilkan_data", False):
-  conn = sqlite3.connect("dian_wacana.db")
-  cursor = conn.cursor()
-  cursor.execute("SELECT id, nama, nisn, jenjang, kelas, jk FROM siswa")
-  data_siswa = cursor.fetchall()
-  conn.close()
-
-  if data_siswa:
-    df = pd.DataFrame(
-        data_siswa,
-        columns=["ID", "Nama Lengkap", "NISN", "Jenjang", "Kelas", "L/P"],
-    )
-    st.dataframe(df, use_container_width=True)
-  else:
-    st.info("Belum ada data siswa di dalam database.")
-else:
+if pilihan_menu == "Beranda":
+  st.title("🏫 Selamat Datang di Portal Dian Wacana")
   st.write(
-      "Klik tombol **View Data Siswa** di atas untuk menampilkan daftar siswa."
+      "Aplikasi sistem informasi administrasi dan kesiswaan TK - KB - SD Dian"
+      " Wacana."
+  )
+  st.write(
+      "Silakan pilih menu **Data Siswa** di sidebar sebelah kiri untuk"
+      " mengelola data siswa."
+  )
+
+elif pilihan_menu == "Data Siswa":
+  # --- MENU UTAMA: MEMANGGIL DATA SISWA ---
+  init_db()
+
+  st.title("📚 Manajemen Data Siswa TK-KB-SD Dian Wacana")
+  st.write("Gunakan formulir di bawah ini untuk menambahkan data siswa baru.")
+
+  # Form Tambah Data di Tengah
+  with st.form("form_tambah_siswa_tengah"):
+    st.subheader("Formulir Tambah Siswa Baru")
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+      nama = st.text_input("Nama Lengkap")
+      nisn = st.text_input("NISN / No. Induk")
+      jenjang = st.selectbox("Jenjang", ["KB", "TK", "SD"])
+    with col_b:
+      kelas = st.text_input("Kelas")
+      jk = st.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
+
+    submit = st.form_submit_button("Simpan Data Siswa")
+
+    if submit:
+      if nama and nisn and kelas:
+        conn = sqlite3.connect("dian_wacana.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO siswa (nama, nisn, jenjang, kelas, jk) VALUES (?, ?, ?, ?, ?)",
+            (nama, nisn, jenjang, kelas, jk),
+        )
+        conn.commit()
+        conn.close()
+        st.success("Data siswa berhasil ditambahkan!")
+      else:
+        st.error("Semua kolom harus diisi!")
+
+  st.markdown("---")
+
+  # Tombol View Data & Tabel di Bawahnya
+  st.subheader("Data Siswa Terdaftar")
+
+  if st.button("👁️ View Data Siswa"):
+    st.session_state["tampilkan_data"] = True
+
+  if st.session_state.get("tampilkan_data", False):
+    conn = sqlite3.connect("dian_wacana.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nama, nisn, jenjang, kelas, jk FROM siswa")
+    data_siswa = cursor.fetchall()
+    conn.close()
+
+    if data_siswa:
+      df = pd.DataFrame(
+          data_siswa,
+          columns=["ID", "Nama Lengkap", "NISN", "Jenjang", "Kelas", "L/P"],
+      )
+      st.dataframe(df, use_container_width=True)
+    else:
+      st.info("Belum ada data siswa di dalam database.")
+  else:
+    st.write(
+        "Klik tombol **View Data Siswa** di atas untuk menampilkan daftar siswa."
+    )
+
+elif pilihan_menu == "Informasi Sekolah":
+  st.title("ℹ️ Informasi Sekolah")
+  st.write(
+      "Halaman ini berisi profil atau informasi umum mengenai TK, KB, dan SD"
+      " Dian Wacana."
   )
